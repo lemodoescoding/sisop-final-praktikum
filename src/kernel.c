@@ -1,6 +1,6 @@
-#include "../include/kernel.h"
-#include "filesystem.h"
 #include "shell.h"
+#include "kernel.h"
+#include "filesystem.h"
 
 void main() {
   fsInit();

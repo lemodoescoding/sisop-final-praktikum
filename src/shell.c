@@ -1,7 +1,7 @@
 #include "shell.h"
-#include "filesystem.h"
 #include "kernel.h"
 #include "std_lib.h"
+#include "filesystem.h"
 
 void shell() {
   char buf[64];
@@ -51,11 +51,11 @@ void printCWD(byte cwd) {
   readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
   readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
 
-  while (cmd != FS_NODE_P_ROOT) {
+  while (cwd != FS_NODE_P_ROOT) {
     strcpy(paths[path_count], node_fs_buf.nodes[cwd].node_name);
     path_count++;
 
-    cmd = node_fs_buf.nodes[i].parent_index;
+    cwd = node_fs_buf.nodes[path_count].parent_index;
   }
 
   for (j = path_count; j >= 0; j--) {
