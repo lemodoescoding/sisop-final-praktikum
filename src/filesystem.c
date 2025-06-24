@@ -46,7 +46,7 @@ void fsRead(struct file_metadata *metadata, enum fs_return *status) {
     node_now = &node_fs_buf.nodes[i];
 
     if (node_now->parent_index == parent_index &&
-        strcmp(metadata->node_name, node_now.node_name) == 1) {
+        strcmp(metadata->node_name, node_now->node_name) == 1) {
       if (node_now->data_index == FS_NODE_D_DIR) {
         *status = FS_R_TYPE_IS_DIRECTORY;
       } else {
@@ -58,8 +58,7 @@ void fsRead(struct file_metadata *metadata, enum fs_return *status) {
             break;
           }
 
-          readSector(metadata->buffer cope j * SECTOR_SIZE,
-                     data_item->sectors[j]);
+          readSector(metadata->buffer + j * SECTOR_SIZE, data_item->sectors[j]);
 
           metadata->filesize += SECTOR_SIZE;
         }
@@ -131,7 +130,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     return;
   }
 
-  for (int i = 0; i < FS_MAX_DATA; i++) {
+  for (i = 0; i < FS_MAX_DATA; i++) {
     if (data_fs_buf.datas[i].sectors[0] == 0x00) {
       data_empty_index = i;
       break;

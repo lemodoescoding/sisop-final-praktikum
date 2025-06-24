@@ -1,7 +1,7 @@
 #include "shell.h"
+#include "filesystem.h"
 #include "kernel.h"
 #include "std_lib.h"
-#include "filesystem.h"
 
 void shell() {
   char buf[64];
@@ -17,38 +17,73 @@ void shell() {
     readString(buf);
     parseCommand(buf, cmd, arg);
 
-    if (strcmp(cmd, "cd")) cd(&cwd, arg[0]);
-    else if (strcmp(cmd, "ls")) ls(cwd, arg[0]);
-    else if (strcmp(cmd, "mv")) mv(cwd, arg[0], arg[1]);
-    else if (strcmp(cmd, "cp")) cp(cwd, arg[0], arg[1]);
-    else if (strcmp(cmd, "cat")) cat(cwd, arg[0]);
-    else if (strcmp(cmd, "mkdir")) mkdir(cwd, arg[0]);
-    else if (strcmp(cmd, "clear")) clearScreen();
-    else printString("Invalid command\n");
+    if (strcmp(cmd, "cd"))
+      cd(&cwd, arg[0]);
+    else if (strcmp(cmd, "ls"))
+      ls(cwd, arg[0]);
+    else if (strcmp(cmd, "mv"))
+      mv(cwd, arg[0], arg[1]);
+    else if (strcmp(cmd, "cp"))
+      cp(cwd, arg[0], arg[1]);
+    else if (strcmp(cmd, "cat"))
+      cat(cwd, arg[0]);
+    else if (strcmp(cmd, "mkdir"))
+      mkdir(cwd, arg[0]);
+    else if (strcmp(cmd, "clear"))
+      clearScreen();
+    else
+      printString("Invalid command\n");
   }
 }
 
 // TODO: 4. Implement printCWD function
-void printCWD(byte cwd) {}
+void printCWD(byte cwd) {
+  struct node_fs node_fs_buf;
+  char paths[64][16];
+  int path_count = 0;
+  unsigned int j = 0;
+
+  if (cwd == FS_NODE_P_ROOT) {
+    printString("/");
+    return;
+  }
+
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+
+  while (cmd != FS_NODE_P_ROOT) {
+    strcpy(paths[path_count], node_fs_buf.nodes[cwd].node_name);
+    path_count++;
+
+    cmd = node_fs_buf.nodes[i].parent_index;
+  }
+
+  for (j = path_count; j >= 0; j--) {
+    if (j >= 0) {
+      printString("/");
+    }
+
+    printString(paths[j]);
+  }
+}
 
 // TODO: 5. Implement parseCommand function
-void parseCommand(char* buf, char* cmd, char arg[2][64]) {}
+void parseCommand(char *buf, char *cmd, char arg[2][64]) {}
 
 // TODO: 6. Implement cd function
-void cd(byte* cwd, char* dirname) {}
+void cd(byte *cwd, char *dirname) {}
 
 // TODO: 7. Implement ls function
-void ls(byte cwd, char* dirname) {}
+void ls(byte cwd, char *dirname) {}
 
 // TODO: 8. Implement mv function
-void mv(byte cwd, char* src, char* dst) {}
+void mv(byte cwd, char *src, char *dst) {}
 
 // TODO: 9. Implement cp function
-void cp(byte cwd, char* src, char* dst) {}
+void cp(byte cwd, char *src, char *dst) {}
 
 // TODO: 10. Implement cat function
-void cat(byte cwd, char* filename) {}
+void cat(byte cwd, char *filename) {}
 
 // TODO: 11. Implement mkdir function
-void mkdir(byte cwd, char* dirname) {}
-
+void mkdir(byte cwd, char *dirname) {}

@@ -1,4 +1,4 @@
-#include "kernel.h"
+#include "../include/kernel.h"
 #include "filesystem.h"
 #include "shell.h"
 
