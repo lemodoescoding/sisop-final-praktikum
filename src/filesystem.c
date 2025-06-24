@@ -58,7 +58,8 @@ void fsRead(struct file_metadata *metadata, enum fs_return *status) {
             break;
           }
 
-          readSector(metadata->buffer + j * SECTOR_SIZE, data_item->sectors[j]);
+          readSector(metadata->buffer cope j * SECTOR_SIZE,
+                     data_item->sectors[j]);
 
           metadata->filesize += SECTOR_SIZE;
         }
@@ -84,8 +85,15 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   struct node_item *node_empty;
   unsigned int i = 0;
   unsigned int j = 0;
-  unsigned int node_empty_index = 0;
+  int node_empty_index = -1;
+  int data_empty_index = -1;
+  byte free_blocks[FS_MAX_SECTOR];
 
+  unsigned int blocks_need = 0;
+  unsigned int blocks_available = 0;
+  byte sector_num = 0;
+
+  readSector(&map_fs_buf, FS_MAP_SECTOR_NUMBER);
   readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
   readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
   readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
@@ -99,15 +107,68 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
         strcmp(node_now->node_name, name) == 1) {
       *status = FS_W_NODE_ALREADY_EXISTS;
       return;
-    } else if (strcmp(node_now->node_name, "") == 1) {
-      node_empty_index = i;
-      node_empty = node_now;
+    }
+  }
 
+  for (i = 0; i < FS_MAX_NODE; i++) {
+    if (node_fs_buf.nodes[i].node_name[0] == 0x00) {
+      node_empty_index = i;
       break;
     }
   }
 
-  if (*status == FS_W_NO_FREE_NODE) {
+  if (node_empty_index == -1) {
+    *status = FS_W_NO_FREE_NODE;
     return;
   }
+
+  if (metadata->filesize == 0) {
+    strcpy(node_fs_buf.nodes[i].node_name, metadata->node_name);
+    node_fs_buf.nodes[i].parent_index = metadata->parent_index;
+    node_fs_buf.nodes[i].data_index = FS_NODE_D_DIR;
+
+    *status = FS_SUCCESS;
+    return;
+  }
+
+  for (int i = 0; i < FS_MAX_DATA; i++) {
+    if (data_fs_buf.datas[i].sectors[0] == 0x00) {
+      data_empty_index = i;
+      break;
+    }
+  }
+
+  if (data_empty_index == -1) {
+    *status = FS_W_NO_FREE_DATA;
+    return;
+  }
+
+  blocks_need = div(metadata->filesize + SECTOR_SIZE - 1, SECTOR_SIZE);
+  for (i = 0; i < 256 && blocks_available < blocks_need; i++) {
+    if (map_fs_buf.is_used[i] == 0x00) {
+      free_blocks[blocks_available] = i;
+      blocks_available++;
+    }
+  }
+
+  if (blocks_available < blocks_available) {
+    *status = FS_W_NOT_ENOUGH_SPACE;
+    return;
+  }
+
+  node_fs_buf.nodes[node_empty_index].parent_index = metadata->parent_index;
+  node_fs_buf.nodes[node_empty_index].data_index = data_empty_index;
+  strcpy(node_fs_buf.nodes[node_empty_index].node_name, metadata->node_name);
+
+  for (j = 0; j < blocks_available; j++) {
+    sector_num = free_blocks[j];
+
+    data_fs_buf.datas[data_empty_index].sectors[j] = sector_num;
+
+    writeSector(metadata->buffer + j * SECTOR_SIZE, sector_num);
+
+    map_fs_buf.is_used[sector_num] = 0x01;
+  }
+
+  *status = FS_SUCCESS;
 }
