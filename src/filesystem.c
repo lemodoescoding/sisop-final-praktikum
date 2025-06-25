@@ -1,6 +1,6 @@
+#include "filesystem.h"
 #include "kernel.h"
 #include "std_lib.h"
-#include "filesystem.h"
 
 void fsInit() {
   struct map_fs map_fs_buf;
@@ -95,7 +95,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   readSector(&map_fs_buf, FS_MAP_SECTOR_NUMBER);
   readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
   readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
-  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
 
   *status = FS_W_NO_FREE_NODE;
 
@@ -122,9 +122,9 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   }
 
   if (metadata->filesize == 0) {
-    strcpy(node_fs_buf.nodes[i].node_name, metadata->node_name);
-    node_fs_buf.nodes[i].parent_index = metadata->parent_index;
-    node_fs_buf.nodes[i].data_index = FS_NODE_D_DIR;
+    strcpy(node_fs_buf.nodes[node_empty_index].node_name, metadata->node_name);
+    node_fs_buf.nodes[node_empty_index].parent_index = metadata->parent_index;
+    node_fs_buf.nodes[node_empty_index].data_index = FS_NODE_D_DIR;
 
     *status = FS_SUCCESS;
     return;
@@ -150,7 +150,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     }
   }
 
-  if (blocks_available < blocks_available) {
+  if (blocks_available < blocks_need) {
     *status = FS_W_NOT_ENOUGH_SPACE;
     return;
   }
@@ -168,6 +168,11 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
 
     map_fs_buf.is_used[sector_num] = 0x01;
   }
+
+  writeSector(&map_fs_buf, FS_MAP_SECTOR_NUMBER);
+  writeSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  writeSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
+  writeSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
 
   *status = FS_SUCCESS;
 }
