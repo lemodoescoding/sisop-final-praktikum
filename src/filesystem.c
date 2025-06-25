@@ -1,6 +1,6 @@
-#include "filesystem.h"
 #include "kernel.h"
 #include "std_lib.h"
+#include "filesystem.h"
 
 void fsInit() {
   struct map_fs map_fs_buf;
@@ -63,7 +63,7 @@ void fsRead(struct file_metadata *metadata, enum fs_return *status) {
           metadata->filesize += SECTOR_SIZE;
         }
 
-        *status = FS_SUCCESS;
+        *status = FS_R_SUCCESS;
       }
 
       break;
@@ -126,7 +126,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     node_fs_buf.nodes[node_empty_index].parent_index = metadata->parent_index;
     node_fs_buf.nodes[node_empty_index].data_index = FS_NODE_D_DIR;
 
-    *status = FS_SUCCESS;
+    *status = FS_W_SUCCESS;
     return;
   }
 
@@ -174,5 +174,5 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   writeSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
   writeSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
 
-  *status = FS_SUCCESS;
+  *status = FS_W_SUCCESS;
 }
