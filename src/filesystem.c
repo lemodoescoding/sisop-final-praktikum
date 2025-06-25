@@ -126,6 +126,9 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     node_fs_buf.nodes[node_empty_index].parent_index = metadata->parent_index;
     node_fs_buf.nodes[node_empty_index].data_index = FS_NODE_D_DIR;
 
+    writeSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+    writeSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
+
     *status = FS_W_SUCCESS;
     return;
   }

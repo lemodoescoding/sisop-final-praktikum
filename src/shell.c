@@ -1,7 +1,7 @@
 #include "shell.h"
-#include "filesystem.h"
 #include "kernel.h"
 #include "std_lib.h"
+#include "filesystem.h"
 
 void shell() {
   char buf[64];
@@ -161,7 +161,7 @@ void ls(byte cwd, char *dirname) {
   readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
 
   if (strcmp(dirname, ".") == 1 || strcmp(dirname, "") == 1) {
-    printString("CURRECT DIR\n");
+    /* printString("CURRECT DIR\n"); */
 
     for (i = 0; i < FS_MAX_NODE; i++) {
       if (node_fs_buf.nodes[i].parent_index == cwd &&
@@ -203,94 +203,274 @@ void ls(byte cwd, char *dirname) {
 }
 
 // TODO: 8. Implement mv function
-void mv(byte cwd, char *src, char *dst) {}
+void mv(byte cwd, char *src, char *dst) {
+  struct node_fs node_fs_buf;
+  unsigned int i = 0;
+  unsigned int j = 0;
+
+  unsigned int slashPos = 0;
+
+  char firstPart[16];
+  char secondPart[16];
+
+  unsigned int fileExist = 0;
+  unsigned int folderExist = 0;
+  unsigned int fileLoc = 0;
+  unsigned int folderLoc = 0;
+
+  clear((byte *)firstPart, 16);
+  clear((byte *)secondPart, 16);
+  readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
+  readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+
+  for (i = 0; i < FS_MAX_NODE; i++) {
+    if (node_fs_buf.nodes[i].parent_index == cwd &&
+        strcmp(node_fs_buf.nodes[i].node_name, src) == 1 &&
+        node_fs_buf.nodes[i].data_index != 0xFF) {
+      fileExist = 1;
+      fileLoc = i;
+      break;
+    }
+  }
+
+  if (fileExist == 0) {
+    printString("mv: ");
+    printString(src);
+    printString(" nowhere to be found\n");
+    return;
+  }
+
+  i = 0;
+  while (dst[i] != '/') {
+    slashPos++;
+    i++;
+  }
+
+  j = 0;
+  if (slashPos == 0) {
+    for (i = 1; dst[i] != '\0'; i++) {
+      secondPart[j++] = dst[i];
+    }
+
+    secondPart[j] = '\0';
+
+    node_fs_buf.nodes[fileLoc].parent_index = FS_NODE_P_ROOT;
+    clear((byte *)node_fs_buf.nodes[fileLoc].node_name, 14);
+    strcpy(node_fs_buf.nodes[fileLoc].node_name, secondPart);
+
+    writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
+    writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+
+    return;
+  }
+
+  j = 0;
+  if (slashPos >= 2) {
+    for (i = 0; dst[i] != '/'; i++) {
+      firstPart[j++] = dst[i];
+    }
+
+    firstPart[j] = '\0';
+    j = 0;
+
+    for (i = slashPos + 1; dst[i] != '\0'; i++) {
+      secondPart[j++] = dst[i];
+    }
+
+    secondPart[j] = '\0';
+
+    if (strcmp(firstPart, "..") == 0) {
+      for (i = 0; i < FS_MAX_NODE; i++) {
+        if (node_fs_buf.nodes[i].data_index == 0xFF &&
+            strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1) {
+          folderExist = 1;
+          folderLoc = i;
+          break;
+        }
+      }
+    } else {
+      if (cwd == FS_NODE_P_ROOT) {
+        printString("mv: ");
+        printString(firstPart);
+        printString(" directory is not valid\n");
+        return;
+      }
+
+      folderLoc = node_fs_buf.nodes[cwd].parent_index;
+      folderExist = 1;
+    }
+
+    if (folderExist == 0) {
+      printString("mv: ");
+      printString(firstPart);
+      printString(" directory doesnt exist\n");
+
+      return;
+    }
+
+    node_fs_buf.nodes[fileLoc].parent_index = folderLoc;
+    clear((byte *)node_fs_buf.nodes[fileLoc].node_name, 14);
+    strcpy(node_fs_buf.nodes[fileLoc].node_name, secondPart);
+
+    writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
+    writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+
+    return;
+  }
+}
 
 // TODO: 9. Implement cp function
 void cp(byte cwd, char *src, char *dst) {}
 
 // TODO: 10. Implement cat function
 void cat(byte cwd, char *filename) {
-  struct node_fs node_fs_buf;
-  struct data_fs data_fs_buf;
+  /* struct node_fs node_fs_buf; */
+  /* struct data_fs data_fs_buf; */
 
-  char buf[SECTOR_SIZE];
+  struct file_metadata file_data;
+  enum fs_return file_return_status;
+  char buf[FS_MAX_SECTOR * SECTOR_SIZE];
+  char smallBuf[2];
 
   unsigned int i = 0;
   unsigned int j = 0;
   unsigned int fileFound = 0;
 
-  readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
-  readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
-  readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
+  /* readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER); */
+  /* readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1); */
+  /* readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER); */
 
-  for (i = 0; i < FS_MAX_NODE; i++) {
-    if (node_fs_buf.nodes[i].parent_index == cwd &&
-        strcmp(node_fs_buf.nodes[i].node_name, filename) == 1) {
-      if (node_fs_buf.nodes[i].data_index == 0xFF) {
-        printString("cat: ");
-        printString(filename);
-        printString(" is a directory\n");
-        return;
-      } else {
+  file_data.parent_index = cwd;
+  clear((byte *)smallBuf, 2);
+  clear((byte *)file_data.node_name, 14);
+  clear((byte *)file_data.buffer, FS_MAX_SECTOR * SECTOR_SIZE);
+  strcpy(file_data.node_name, filename);
 
-        fileFound = 1;
+  smallBuf[1] = '\0';
 
-        for (j = 0; j < FS_MAX_SECTOR; j++) {
-          if (data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j] ==
-              0x00) {
-            break;
-          }
+  fsRead(&file_data, &file_return_status);
 
-          readSector(
-              buf,
-              data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j]);
-          printString(buf);
-          printString("\n");
-        }
-      }
+  if (file_return_status == FS_R_SUCCESS) {
+    for (i = 0; i < file_data.filesize; i++) {
+      smallBuf[0] = file_data.buffer[i];
+      printString(smallBuf);
     }
+
+    printString("\n");
+    return;
   }
 
-  if (fileFound == 0) {
+  else if (file_return_status == FS_R_TYPE_IS_DIRECTORY) {
+    printString("cat: ");
+    printString(filename);
+    printString(" is a directory\n");
+    return;
+  }
+
+  else {
     printString("cat: ");
     printString(filename);
     printString(" is not a file\n");
     return;
   }
+
+  /* for (i = 0; i < FS_MAX_NODE; i++) { */
+  /*   if (node_fs_buf.nodes[i].parent_index == cwd && */
+  /*       strcmp(node_fs_buf.nodes[i].node_name, filename) == 1) { */
+  /*     if (node_fs_buf.nodes[i].data_index == 0xFF) { */
+  /*       printString("cat: "); */
+  /*       printString(filename); */
+  /*       printString(" is a directory\n"); */
+  /*       return; */
+  /*     } else { */
+  /**/
+  /*       fileFound = 1; */
+  /**/
+  /*       for (j = 0; j < FS_MAX_SECTOR; j++) { */
+  /*         if (data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j]
+   * == */
+  /*             0x00) { */
+  /*           break; */
+  /*         } */
+  /**/
+  /*         readSector( */
+  /*             buf, */
+  /*             data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j]);
+   */
+  /*         printString(buf); */
+  /*         printString("\n"); */
+  /*       } */
+  /*     } */
+  /*   } */
+  /* } */
+  /**/
+  /* if (fileFound == 0) { */
+  /*   printString("cat: "); */
+  /*   printString(filename); */
+  /*   printString(" is not a file\n"); */
+  /*   return; */
+  /* } */
 }
 
 // TODO: 11. Implement mkdir function
 void mkdir(byte cwd, char *dirname) {
-  struct node_fs node_fs_buf;
-  unsigned int i = 0;
+  struct file_metadata new_dir;
+  enum fs_return new_dir_status;
+  /* struct node_fs node_fs_buf; */
+  /* unsigned int i = 0; */
 
-  readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
-  readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+  /* readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER); */
+  /* readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1); */
 
-  for (i = 0; i < FS_MAX_NODE; i++) {
-    if (node_fs_buf.nodes[i].parent_index == cwd &&
-        strcmp(node_fs_buf.nodes[i].node_name, dirname) == 1 &&
-        node_fs_buf.nodes[i].data_index == 0xFF) {
-      printString("mkdir: ");
-      printString(dirname);
-      printString(" already exists\n");
+  new_dir.parent_index = cwd;
+  clear((byte *)new_dir.node_name, 14);
+  new_dir.filesize = 0;
+  strcpy(new_dir.node_name, dirname);
 
-      return;
-    }
+  fsWrite(&new_dir, &new_dir_status);
+
+  if (new_dir_status == FS_W_SUCCESS) {
+    return;
+  } else if (new_dir_status == FS_W_NODE_ALREADY_EXISTS) {
+    printString("mkdir: ");
+    printString(dirname);
+    printString(" already exists\n");
+
+    return;
+  } else if (new_dir_status == FS_W_NOT_ENOUGH_SPACE) {
+    printString("mkdir: Not Enough Space\n");
+    return;
+  } else if (new_dir_status == FS_W_NO_FREE_NODE) {
+    printString("mkdir: node is too full\n");
+    return;
+  } else {
+    printString("mkdir: unexpected internal error\n");
   }
 
-  for (i = 0; i < FS_MAX_NODE; i++) {
-    if (node_fs_buf.nodes[i].node_name[0] == 0x00) {
-      node_fs_buf.nodes[i].parent_index = cwd;
-      node_fs_buf.nodes[i].data_index = 0xFF;
-      strcpy(node_fs_buf.nodes[i].node_name, dirname);
-
-      writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
-      writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
-
-      return;
-    }
-  }
-
-  printString("mkdir: Not Enough Space\n");
+  /* for (i = 0; i < FS_MAX_NODE; i++) { */
+  /*   if (node_fs_buf.nodes[i].parent_index == cwd && */
+  /*       strcmp(node_fs_buf.nodes[i].node_name, dirname) == 1 && */
+  /*       node_fs_buf.nodes[i].data_index == 0xFF) { */
+  /*     printString("mkdir: "); */
+  /*     printString(dirname); */
+  /*     printString(" already exists\n"); */
+  /**/
+  /*     return; */
+  /*   } */
+  /* } */
+  /**/
+  /* for (i = 0; i < FS_MAX_NODE; i++) { */
+  /*   if (node_fs_buf.nodes[i].node_name[0] == 0x00) { */
+  /*     node_fs_buf.nodes[i].parent_index = cwd; */
+  /*     node_fs_buf.nodes[i].data_index = 0xFF; */
+  /*     strcpy(node_fs_buf.nodes[i].node_name, dirname); */
+  /**/
+  /*     writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER); */
+  /*     writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1); */
+  /**/
+  /*     return; */
+  /*   } */
+  /* } */
+  /**/
+  /* printString("mkdir: Not Enough Space\n"); */
 }
