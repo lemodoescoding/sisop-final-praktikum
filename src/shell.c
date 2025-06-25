@@ -170,9 +170,10 @@ void ls(byte cwd, char *dirname) {
     for (i=0; i<FS_MAX_NODE; i++){
       if(node_fs_buf.nodes[i].parent_index == cwd && node_fs_buf.nodes[i].node_name[0] != '\0'){
         printString(node_fs_buf.nodes[i].node_name);
-        printString("\n");
+        printString(" ");
       }
     }
+    printString("\n");
     return;
   }
 
@@ -182,9 +183,10 @@ void ls(byte cwd, char *dirname) {
         for (j=0; j<FS_MAX_NODE; j++){
           if (node_fs_buf.nodes[j].parent_index == i && node_fs_buf.nodes[j].node_name[0] != '\0'){
           printString(node_fs_buf.nodes[j].node_name);
-          printString("\n");
+          printString(" ");
           }
         }
+        printString("\n");
       } else {
         printString(node_fs_buf.nodes[i].node_name);
         printString("\n");
@@ -212,10 +214,56 @@ void mv(byte cwd, char *src, char *dst) {
 }
 
 // TODO: 9. Implement cp function
-void cp(byte cwd, char *src, char *dst) {}
+void cp(byte cwd, char *src, char *dst) {
+  
+}
 
 // TODO: 10. Implement cat function
-void cat(byte cwd, char *filename) {}
+void cat(byte cwd, char *filename) {
+  struct node_fs node_fs_buf;
+  struct data_fs data_fs_buf;
+
+  char buf[SECTOR_SIZE];
+
+  unsigned int i = 0;
+  unsigned int j = 0;
+  unsigned int fileFound = 0;
+
+  readSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
+  readSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+  readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
+
+  for (i = 0; i < FS_MAX_NODE; i++) {
+    if (node_fs_buf.nodes[i].parent_index == cwd &&
+        strcmp(node_fs_buf.nodes[i].node_name, filename) == 1) {
+      if (node_fs_buf.nodes[i].data_index == 0xFF) {
+        printString("Error: Path is a directory\n");
+        return;
+      } else {
+
+        fileFound = 1;
+
+        for (j = 0; j < FS_MAX_SECTOR; j++) {
+          if (data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j] ==
+              0x00) {
+            break;
+          }
+
+          readSector(
+              buf,
+              data_fs_buf.datas[node_fs_buf.nodes[i].data_index].sectors[j]);
+          printString(buf);
+          printString("\n");
+        }
+      }
+    }
+  }
+
+  if (fileFound == 0) {
+    printString("Error: Path is not a file\n");
+    return;
+  }
+}
 
 // TODO: 11. Implement mkdir function
 void mkdir(byte cwd, char *dirname) {}
