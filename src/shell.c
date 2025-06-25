@@ -68,7 +68,55 @@ void printCWD(byte cwd) {
 }
 
 // TODO: 5. Implement parseCommand function
-void parseCommand(char *buf, char *cmd, char arg[2][64]) {}
+void parseCommand(char *buf, char *cmd, char arg[2][64]) {
+  unsigned int bufLen = 0;
+  unsigned int i = 0;
+  unsigned int j = 0;
+  unsigned int k = 0;
+  unsigned int m = 0;
+
+  clear((byte *)cmd, 64);
+  clear((byte *)arg[0], 64);
+  clear((byte *)arg[1], 64);
+
+  bufLen = strlen(buf);
+
+  for (i = 0; buf[i] != ' ' && buf[i] != '\0'; i++) {
+    cmd[i] = buf[i];
+  }
+
+  cmd[i] = '\0';
+
+  if (buf[i] == '\0') {
+    return;
+  }
+
+  while (buf[i] == ' ')
+    i++;
+
+  for (j = i; buf[j] != ' ' && buf[j] != '\0'; j++) {
+    arg[0][k] = buf[j];
+    k++;
+  }
+
+  arg[0][k] = '\0';
+  if (buf[j] == '\0') {
+    return;
+  }
+
+  while (buf[j] == ' ')
+    j++;
+
+  k = 0;
+
+  for (m = j; buf[m] != ' ' && buf[m] != '\0'; m++) {
+    arg[1][k] = buf[m];
+    k++;
+  }
+
+  arg[1][k] = '\0';
+  return;
+}
 
 // TODO: 6. Implement cd function
 void cd(byte *cwd, char *dirname) {
@@ -153,7 +201,15 @@ void ls(byte cwd, char *dirname) {
 }
 
 // TODO: 8. Implement mv function
-void mv(byte cwd, char *src, char *dst) {}
+void mv(byte cwd, char *src, char *dst) {
+  struct node_fs node_fs_buf;
+  
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+
+
+
+}
 
 // TODO: 9. Implement cp function
 void cp(byte cwd, char *src, char *dst) {}
