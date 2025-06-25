@@ -71,10 +71,86 @@ void printCWD(byte cwd) {
 void parseCommand(char *buf, char *cmd, char arg[2][64]) {}
 
 // TODO: 6. Implement cd function
-void cd(byte *cwd, char *dirname) {}
+void cd(byte *cwd, char *dirname) {
+  struct node_fs node_fs_buf;
+  unsigned int i;
+  
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+
+  if (strcmp(dirname, "/")==0){
+    *cwd = FS_NODE_P_ROOT;
+    return;
+  }
+
+  if(strcmp(dirname, "..")==0){
+    if(*cwd!=FS_NODE_P_ROOT){
+      *cwd=node_fs_buf.nodes[*cwd].parent_index;
+    }
+    return;
+  }
+
+  for(i=0; i<FS_MAX_NODE; i++){
+    if(strcmp(node_fs_buf.nodes[i].node_name, dirname)==0 && node_fs_buf.nodes[i].parent_index==*cwd){
+      if(node_fs_buf.nodes[i].data_index != FS_NODE_D_DIR){
+        printString("cd: ");
+        printString(dirname);
+        printString(": Not a directory\n");
+        return;
+      } else {
+        *cwd = i;
+        return;
+      }
+    }
+  }
+
+  printString("cd: ");
+  printString(dirname);
+  printString(": No such file or directory\n");
+}
 
 // TODO: 7. Implement ls function
-void ls(byte cwd, char *dirname) {}
+void ls(byte cwd, char *dirname) {
+  struct node_fs node_fs_buf;
+  unsigned int i;
+  unsigned int j;
+  
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+
+  if(strcmp(dirname, ".")==0 || dirname[0]=='\0'){
+    for (i=0; i<FS_MAX_NODE; i++){
+      if(node_fs_buf.nodes[i].parent_index == cwd && node_fs_buf.nodes[i].node_name[0] != '\0'){
+        printString(node_fs_buf.nodes[i].node_name);
+        printString("\n");
+      }
+    }
+    return;
+  }
+
+  for(i=0; i<FS_MAX_NODE; i++){
+    if(strcmp(node_fs_buf.nodes[i].node_name, dirname)==0 && node_fs_buf.nodes[i].parent_index==cwd){
+      if(node_fs_buf.nodes[i].data_index==FS_NODE_D_DIR){
+        for (j=0; j<FS_MAX_NODE; j++){
+          if (node_fs_buf.nodes[j].parent_index == i && node_fs_buf.nodes[j].node_name[0] != '\0'){
+          printString(node_fs_buf.nodes[j].node_name);
+          printString("\n");
+          }
+        }
+      } else {
+        printString(node_fs_buf.nodes[i].node_name);
+        printString("\n");
+      }
+      return;
+    }
+  }
+
+  printString("ls: cannot access '");
+  printString(dirname);
+  printString("'");
+  printString(": No such file or directory\n");
+  return;
+}
 
 // TODO: 8. Implement mv function
 void mv(byte cwd, char *src, char *dst) {}

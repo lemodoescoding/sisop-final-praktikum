@@ -95,7 +95,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   readSector(&map_fs_buf, FS_MAP_SECTOR_NUMBER);
   readSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
   readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
-  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
 
   *status = FS_W_NO_FREE_NODE;
 
@@ -122,9 +122,9 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   }
 
   if (metadata->filesize == 0) {
-    strcpy(node_fs_buf.nodes[i].node_name, metadata->node_name);
-    node_fs_buf.nodes[i].parent_index = metadata->parent_index;
-    node_fs_buf.nodes[i].data_index = FS_NODE_D_DIR;
+    strcpy(node_fs_buf.nodes[node_empty_index].node_name, metadata->node_name);
+    node_fs_buf.nodes[node_empty_index].parent_index = metadata->parent_index;
+    node_fs_buf.nodes[node_empty_index].data_index = FS_NODE_D_DIR;
 
     *status = FS_SUCCESS;
     return;
@@ -150,7 +150,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     }
   }
 
-  if (blocks_available < blocks_available) {
+  if (blocks_available < blocks_need) {
     *status = FS_W_NOT_ENOUGH_SPACE;
     return;
   }
@@ -169,5 +169,92 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     map_fs_buf.is_used[sector_num] = 0x01;
   }
 
+  writeSector(&map_fs_buf, FS_MAP_SECTOR_NUMBER);
+  writeSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  writeSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
+  writeSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
+
   *status = FS_SUCCESS;
+}
+```
+
+ama di printCWD dan parseCommand  di shell.c
+```shell.c
+void printCWD(byte cwd) {
+  struct node_fs node_fs_buf;
+  char paths[64][14];
+  int path_count = 0;
+  int j = 0;
+
+  if (cwd == FS_NODE_P_ROOT) {
+    printString("/");
+    return;
+  }
+
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 0x001);
+
+  while (cwd != FS_NODE_P_ROOT) {
+    clear((byte *)paths[path_count], 14);
+    strcpy(paths[path_count], node_fs_buf.nodes[cwd].node_name);
+    path_count++;
+
+    cwd = node_fs_buf.nodes[cwd].parent_index;
+  }
+
+  for (j = path_count - 1; j >= 0; j--) {
+    printString("/");
+    printString(paths[j]);
+  }
+}
+
+// TODO: 5. Implement parseCommand function
+void parseCommand(char *buf, char *cmd, char arg[2][64]) {
+  unsigned int bufLen = 0;
+  unsigned int i = 0;
+  unsigned int j = 0;
+  unsigned int k = 0;
+  unsigned int m = 0;
+
+  clear((byte *)cmd, 64);
+  clear((byte *)arg[0], 64);
+  clear((byte *)arg[1], 64);
+
+  bufLen = strlen(buf);
+
+  for (i = 0; buf[i] != ' ' && buf[i] != '\0'; i++) {
+    cmd[i] = buf[i];
+  }
+
+  cmd[i] = '\0';
+
+  if (buf[i] == '\0') {
+    return;
+  }
+
+  while (buf[i] == ' ')
+    i++;
+
+  for (j = i; buf[j] != ' ' && buf[j] != '\0'; j++) {
+    arg[0][k] = buf[j];
+    k++;
+  }
+
+  arg[0][k] = '\0';
+  if (buf[j] == '\0') {
+    return;
+  }
+
+  while (buf[j] == ' ')
+    j++;
+
+  k = 0;
+
+  for (m = j; buf[m] != ' ' && buf[m] != '\0'; m++) {
+    arg[1][k] = buf[m];
+    k++;
+  }
+
+  arg[1][k] = '\0';
+  return;
 }
