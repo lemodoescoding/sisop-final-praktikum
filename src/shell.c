@@ -329,7 +329,113 @@ void mv(byte cwd, char *src, char *dst) {
 }
 
 // TODO: 9. Implement cp function
-void cp(byte cwd, char *src, char *dst) {}
+void cp(byte cwd, char *src, char *dst) {
+  struct node_fs node_fs_buf;
+  struct file_metadata file_data;
+  struct file_metadata new_file;
+  char buffer[SECTOR_SIZE * FS_MAX_SECTOR];
+  char firstPart[14];
+  char secondPart[14];
+  int i = 0, j = 0;
+  int slashPos = -1;
+  int isThereSlash = -1;
+  byte dst_parent = cwd;
+  int dstLen = 0;
+  enum fs_return status;
+
+  clear((byte *)firstPart, MAX_FILENAME);
+  clear((byte *)secondPart, MAX_FILENAME);
+  clear((byte *)file_data.node_name, MAX_FILENAME);
+  clear((byte *)new_file.node_name, MAX_FILENAME);
+  clear((byte *)buffer, sizeof(buffer));
+
+  file_data.parent_index = cwd;
+  strcpy(file_data.node_name, src);
+
+  readSector(&(node_fs_buf.nodes), FS_NODE_SECTOR_NUMBER);
+  readSector(((byte *)&node_fs_buf.nodes) + SECTOR_SIZE,
+             FS_NODE_SECTOR_NUMBER + 1);
+
+  dstLen = strlen(dst);
+
+  fsRead(&file_data, &status);
+
+  if (status == FS_R_NODE_NOT_FOUND) {
+    printString("cp: source file not found\n");
+    return;
+  } else if (status == FS_R_TYPE_IS_DIRECTORY) {
+    printString("cp: source is a directory\n");
+    return;
+  }
+
+  for (i = 0; dst[i] != '\0' && i < dstLen; i++) {
+    if (i == dstLen - 1 && isThereSlash == -1 && dst[i] != '/') {
+      isThereSlash = -1;
+      break;
+    }
+
+    if (dst[i] == '/' && i < dstLen && isThereSlash == -1) {
+      isThereSlash = 1;
+      slashPos = i;
+      break;
+    }
+  }
+
+  i = 0;
+  j = 0;
+
+  if (isThereSlash == -1) {
+    printString("NO SLASH\n");
+    printString(dst);
+    printString("\n");
+
+  } else if (slashPos == 0 && isThereSlash == 1) {
+    for (i = 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
+      firstPart[j++] = dst[i];
+    }
+
+    firstPart[j] = '\0';
+
+    new_file.parent_index = 0xFF;
+
+    printString(firstPart);
+    printString("\n");
+  } else if (dst[0] == '.' && dst[1] == '.' && dst[2] == '/' &&
+             isThereSlash == 1) {
+    for (i = 3; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
+      firstPart[j++] = dst[i];
+    }
+
+    firstPart[j] = '\0';
+
+    new_file.parent_index = node_fs_buf.nodes[cwd].parent_index;
+
+    printString(firstPart);
+    printString("\n");
+  } else if (slashPos > 2 && isThereSlash == 1) {
+    j = 0;
+    for (i = 0; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
+      if (dst[i] == '/') {
+        break;
+      }
+      firstPart[j++] = dst[i];
+    }
+
+    firstPart[j] = '\0';
+
+    j = 0;
+    for (i += 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
+      secondPart[j++] = dst[i];
+    }
+
+    secondPart[j] = '\0';
+    printString(firstPart);
+    printString("\n");
+    printString(secondPart);
+    printString("\n");
+  }
+}
+
 // TODO: 10. Implement cat function
 void cat(byte cwd, char *filename) {
   struct file_metadata file_data;
