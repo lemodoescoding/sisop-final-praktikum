@@ -148,7 +148,7 @@ void cd(byte *cwd, char *dirname) {
     }
   }
 
-  printString("Error: Directory nowhere to be found\n");
+  printString("cd: directory nowhere to be found\n");
 }
 
 // TODO: 7. Implement ls function
@@ -332,8 +332,8 @@ void mv(byte cwd, char *src, char *dst) {
 void cp(byte cwd, char *src, char *dst) {
   struct node_fs node_fs_buf;
   struct file_metadata file_data;
+  struct file_metadata dir_data;
   struct file_metadata new_file;
-  char buffer[SECTOR_SIZE * FS_MAX_SECTOR];
   char firstPart[14];
   char secondPart[14];
   int i = 0, j = 0;
@@ -341,19 +341,25 @@ void cp(byte cwd, char *src, char *dst) {
   int isThereSlash = -1;
   byte dst_parent = cwd;
   int dstLen = 0;
+  int dirExist = -1;
+  int dirLoc = 0;
+  int blockCount = 0;
   enum fs_return status;
+
+  char buf[2];
+  char *output_name;
+  char *dir_name;
 
   clear((byte *)firstPart, MAX_FILENAME);
   clear((byte *)secondPart, MAX_FILENAME);
   clear((byte *)file_data.node_name, MAX_FILENAME);
   clear((byte *)new_file.node_name, MAX_FILENAME);
-  clear((byte *)buffer, sizeof(buffer));
 
   file_data.parent_index = cwd;
   strcpy(file_data.node_name, src);
 
   readSector(&(node_fs_buf.nodes), FS_NODE_SECTOR_NUMBER);
-  readSector(((byte *)&node_fs_buf.nodes) + SECTOR_SIZE,
+  readSector((byte *)&node_fs_buf.nodes + SECTOR_SIZE,
              FS_NODE_SECTOR_NUMBER + 1);
 
   dstLen = strlen(dst);
@@ -389,29 +395,29 @@ void cp(byte cwd, char *src, char *dst) {
     printString(dst);
     printString("\n");
 
-  } else if (slashPos == 0 && isThereSlash == 1) {
-    for (i = 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
-      firstPart[j++] = dst[i];
+    if (strcmp(src, dst) == 1) {
+      return;
     }
 
-    firstPart[j] = '\0';
+    file_data.parent_index = cwd;
+    strcpy(secondPart, dst);
+  } else if (slashPos == 0 && isThereSlash == 1) {
+    for (i = 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
+      secondPart[j++] = dst[i];
+    }
 
-    new_file.parent_index = 0xFF;
+    secondPart[j] = '\0';
 
-    printString(firstPart);
-    printString("\n");
+    file_data.parent_index = 0xFF;
   } else if (dst[0] == '.' && dst[1] == '.' && dst[2] == '/' &&
              isThereSlash == 1) {
     for (i = 3; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
-      firstPart[j++] = dst[i];
+      secondPart[j++] = dst[i];
     }
 
-    firstPart[j] = '\0';
+    secondPart[j] = '\0';
 
-    new_file.parent_index = node_fs_buf.nodes[cwd].parent_index;
-
-    printString(firstPart);
-    printString("\n");
+    file_data.parent_index = node_fs_buf.nodes[cwd].parent_index;
   } else if (slashPos > 2 && isThereSlash == 1) {
     j = 0;
     for (i = 0; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
@@ -429,10 +435,28 @@ void cp(byte cwd, char *src, char *dst) {
     }
 
     secondPart[j] = '\0';
-    printString(firstPart);
-    printString("\n");
-    printString(secondPart);
-    printString("\n");
+    for (i = 0; i < FS_MAX_NODE; i++) {
+      if (node_fs_buf.nodes[i].parent_index =
+              cwd && strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1 &&
+              node_fs_buf.nodes[i].data_index == 0xFF) {
+        dirExist = 1;
+        dirLoc = i;
+        break;
+      }
+    }
+
+    if (dirExist == -1) {
+      printString("cp: directory doesnt exist\n");
+      return;
+    }
+
+    file_data.parent_index = dirLoc;
+  }
+
+  strcpy(file_data.node_name, secondPart);
+  fsWrite(&file_data, &status);
+  if (status != FS_W_SUCCESS) {
+    printString("cp: something going unexpectedly\n");
   }
 }
 

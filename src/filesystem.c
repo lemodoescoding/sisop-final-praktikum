@@ -126,7 +126,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
     }
   }
 
-  if (count < (metadata->filesize / SECTOR_SIZE)) {
+  if (count < ((metadata->filesize) / SECTOR_SIZE)) {
     *status = FS_W_NOT_ENOUGH_SPACE;
     return;
   }
@@ -136,7 +136,7 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   node_fs_buf.nodes[found].data_index = free_data;
 
   j = 0;
-  for (i = 0; i < SECTOR_SIZE && j < FS_MAX_SECTOR; i++) {
+  for (i = 0; i < 256 && j < FS_MAX_SECTOR; i++) {
     if (map_fs_buf.is_used[i] == false) {
       data_fs_buf.datas[free_data].sectors[j] = i;
       writeSector(metadata->buffer + (j * SECTOR_SIZE), i);
@@ -147,10 +147,10 @@ void fsWrite(struct file_metadata *metadata, enum fs_return *status) {
   writeSector(map_fs_buf.is_used, FS_MAP_SECTOR_NUMBER);
   writeSector(&data_fs_buf, FS_DATA_SECTOR_NUMBER);
   writeSector(&(node_fs_buf.nodes), FS_NODE_SECTOR_NUMBER);
-  writeSector((byte *)&node_fs_buf.nodes + SECTOR_SIZE,
+  writeSector(((byte *)&node_fs_buf.nodes) + SECTOR_SIZE,
               FS_NODE_SECTOR_NUMBER + 1);
 
-  *status = FS_SUCCESS;
+  *status = FS_W_SUCCESS;
 }
 
 /* void fsWrite(struct file_metadata *metadata, enum fs_return *status) { */
