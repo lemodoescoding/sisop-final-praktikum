@@ -181,8 +181,6 @@ void ls(byte cwd, char *dirname) {
 
     printString("\n");
   } else {
-    printString(dirname);
-    printString("\n");
 
     for (i = 0; i < FS_MAX_NODE; i++) {
       if (strcmp(node_fs_buf.nodes[i].node_name, dirname) == 1) {
@@ -193,13 +191,18 @@ void ls(byte cwd, char *dirname) {
     }
 
     if (foundDir == 0) {
-      printString("Error: Directory not exist anywhere\n");
+      printString("ls: directory not exist anywhere\n");
       return;
     }
 
     for (i = 0; i < FS_MAX_NODE; i++) {
       if (node_fs_buf.nodes[i].parent_index == cwdSecond &&
           node_fs_buf.nodes[i].data_index == 0xFF) {
+
+        printString(node_fs_buf.nodes[i].node_name);
+        printString("/ ");
+      } else if (node_fs_buf.nodes[i].parent_index == cwdSecond &&
+                 node_fs_buf.nodes[i].data_index != 0xFF) {
         printString(node_fs_buf.nodes[i].node_name);
         printString(" ");
       }
@@ -215,22 +218,29 @@ void mv(byte cwd, char *src, char *dst) {
   unsigned int i = 0;
   unsigned int j = 0;
 
-  unsigned int slashPos = 0;
+  int slashPos = 0;
+  int isThereSlash = -1;
+  int dirExist = -1;
+  int dirLoc = 0;
 
-  char firstPart[16];
-  char secondPart[16];
+  char firstPart[14];
+  char secondPart[14];
 
   unsigned int fileExist = 0;
   unsigned int folderExist = 0;
   unsigned int fileLoc = 0;
   unsigned int folderLoc = 0;
 
-  clear((byte *)firstPart, 16);
-  clear((byte *)secondPart, 16);
+  int dstLen = 0;
+
+  clear((byte *)firstPart, 14);
+  clear((byte *)secondPart, 14);
 
   readSector(&(node_fs_buf.nodes), FS_NODE_SECTOR_NUMBER);
   readSector(((byte *)&node_fs_buf.nodes) + SECTOR_SIZE,
              FS_NODE_SECTOR_NUMBER + 1);
+
+  dstLen = strlen(dst);
 
   for (i = 0; i < FS_MAX_NODE; i++) {
     if (node_fs_buf.nodes[i].parent_index == cwd &&
@@ -249,83 +259,68 @@ void mv(byte cwd, char *src, char *dst) {
     return;
   }
 
+  for (i = 0; dst[i] != '\0' && i < dstLen; i++) {
+    if (i == dstLen - 1 && isThereSlash == -1 && dst[i] != '/') {
+      isThereSlash = -1;
+      break;
+    }
+
+    if (dst[i] == '/' && i < dstLen && isThereSlash == -1) {
+      isThereSlash = 1;
+      slashPos = i;
+      break;
+    }
+  }
+
   i = 0;
-  while (dst[i] != '/') {
-    slashPos++;
-    i++;
-  }
-
   j = 0;
-  if (slashPos == 0) {
-    for (i = 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
-      secondPart[j++] = dst[i];
-    }
-
-    secondPart[j] = '\0';
-
-    node_fs_buf.nodes[fileLoc].parent_index = FS_NODE_P_ROOT;
-    clear((byte *)node_fs_buf.nodes[fileLoc].node_name, 14);
-    strcpy(node_fs_buf.nodes[fileLoc].node_name, secondPart);
-
-    writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
-    writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
-
-    return;
-  }
-
-  j = 0;
-  if (slashPos >= 2) {
-    for (i = 0; dst[i] != '/' && j < MAX_FILENAME - 1; i++) {
-      firstPart[j++] = dst[i];
-    }
-
-    firstPart[j] = '\0';
-    j = 0;
-
-    for (i = slashPos + 1; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
-      secondPart[j++] = dst[i];
-    }
-
-    secondPart[j] = '\0';
-
-    if (strcmp(firstPart, "..") == 0) {
-      for (i = 0; i < FS_MAX_NODE; i++) {
-        if (node_fs_buf.nodes[i].data_index == 0xFF &&
-            strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1) {
-          folderExist = 1;
-          folderLoc = i;
-          break;
-        }
-      }
-    } else {
-      if (cwd == FS_NODE_P_ROOT) {
-        printString("mv: ");
-        printString(firstPart);
-        printString(" directory is not valid\n");
-        return;
-      }
-
-      folderLoc = node_fs_buf.nodes[cwd].parent_index;
-      folderExist = 1;
-    }
-
-    if (folderExist == 0) {
-      printString("mv: ");
-      printString(firstPart);
-      printString(" directory doesnt exist\n");
-
+  if (isThereSlash == -1) {
+    if (strcmp(src, dst) == 1) {
       return;
     }
 
-    node_fs_buf.nodes[fileLoc].parent_index = folderLoc;
-    clear((byte *)node_fs_buf.nodes[fileLoc].node_name, 14);
-    strcpy(node_fs_buf.nodes[fileLoc].node_name, secondPart);
+    node_fs_buf.nodes[fileLoc].parent_index = cwd;
+    strcpy(secondPart, dst);
+  } else if (slashPos == 0 && isThereSlash == 1) {
+    strcpy(secondPart, dst + 1);
+    node_fs_buf.nodes[fileLoc].parent_index = 0xFF;
+  } else if (dst[0] == '.' && dst[1] == '.' && dst[2] == '/' &&
+             isThereSlash == 1) {
+    strcpy(secondPart, dst + 3);
 
-    writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
-    writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+    node_fs_buf.nodes[fileLoc].parent_index =
+        node_fs_buf.nodes[cwd].parent_index;
+  } else if (slashPos > 2 && isThereSlash == 1) {
+    j = 0;
+    dst[slashPos] = '\0';
+    strcpy(firstPart, dst);
 
-    return;
+    j = 0;
+    strcpy(secondPart, dst + slashPos + 1);
+
+    i = 0;
+    for (i = 0; i < FS_MAX_NODE; i++) {
+      if (node_fs_buf.nodes[i].parent_index == cwd &&
+          node_fs_buf.nodes[i].data_index == 0xFF &&
+          strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1) {
+        dirExist = 1;
+        dirLoc = i;
+        break;
+      }
+    }
+
+    if (dirExist == -1) {
+      printString("mv: directory doesnt exist\n");
+      return;
+    }
+
+    node_fs_buf.nodes[fileLoc].parent_index = dirLoc;
   }
+  /**/
+  strcpy(node_fs_buf.nodes[fileLoc].node_name, secondPart);
+  writeSector(&node_fs_buf.nodes[0], FS_NODE_SECTOR_NUMBER);
+  writeSector(&node_fs_buf.nodes[32], FS_NODE_SECTOR_NUMBER + 1);
+  return;
 }
 
 // TODO: 9. Implement cp function
@@ -534,5 +529,5 @@ void mkdir(byte cwd, char *dirname) {
     }
   }
 
-  printString("mkdir: Not Enough Space\n");
+  printString("mkdir: not enough space on disk\n");
 }
