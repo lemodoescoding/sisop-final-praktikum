@@ -291,7 +291,7 @@ void mv(byte cwd, char *src, char *dst) {
 
     node_fs_buf.nodes[fileLoc].parent_index =
         node_fs_buf.nodes[cwd].parent_index;
-  } else if (slashPos > 2 && isThereSlash == 1) {
+  } else if (slashPos > 0 && isThereSlash == 1) {
     j = 0;
     dst[slashPos] = '\0';
     strcpy(firstPart, dst);
@@ -408,7 +408,7 @@ void cp(byte cwd, char *src, char *dst) {
     secondPart[j] = '\0';
 
     file_data.parent_index = node_fs_buf.nodes[cwd].parent_index;
-  } else if (slashPos > 2 && isThereSlash == 1) {
+  } else if (slashPos > 0 && isThereSlash == 1) {
     j = 0;
     for (i = 0; dst[i] != '\0' && j < MAX_FILENAME - 1; i++) {
       if (dst[i] == '/') {
