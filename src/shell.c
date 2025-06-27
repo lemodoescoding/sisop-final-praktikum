@@ -333,7 +333,6 @@ void cp(byte cwd, char *src, char *dst) {
   struct node_fs node_fs_buf;
   struct file_metadata file_data;
   struct file_metadata dir_data;
-  struct file_metadata new_file;
   char firstPart[14];
   char secondPart[14];
   int i = 0, j = 0;
@@ -353,14 +352,13 @@ void cp(byte cwd, char *src, char *dst) {
   clear((byte *)firstPart, MAX_FILENAME);
   clear((byte *)secondPart, MAX_FILENAME);
   clear((byte *)file_data.node_name, MAX_FILENAME);
-  clear((byte *)new_file.node_name, MAX_FILENAME);
+  clear((byte *)file_data.buffer, FS_MAX_SECTOR * SECTOR_SIZE);
 
   file_data.parent_index = cwd;
   strcpy(file_data.node_name, src);
 
-  readSector(&(node_fs_buf.nodes), FS_NODE_SECTOR_NUMBER);
-  readSector((byte *)&node_fs_buf.nodes + SECTOR_SIZE,
-             FS_NODE_SECTOR_NUMBER + 1);
+  readSector(&(node_fs_buf.nodes[0]), FS_NODE_SECTOR_NUMBER);
+  readSector(&(node_fs_buf.nodes[32]), FS_NODE_SECTOR_NUMBER + 1);
 
   dstLen = strlen(dst);
 
@@ -391,10 +389,6 @@ void cp(byte cwd, char *src, char *dst) {
   j = 0;
 
   if (isThereSlash == -1) {
-    printString("NO SLASH\n");
-    printString(dst);
-    printString("\n");
-
     if (strcmp(src, dst) == 1) {
       return;
     }
@@ -435,10 +429,11 @@ void cp(byte cwd, char *src, char *dst) {
     }
 
     secondPart[j] = '\0';
+    i = 0;
     for (i = 0; i < FS_MAX_NODE; i++) {
-      if (node_fs_buf.nodes[i].parent_index =
-              cwd && strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1 &&
-              node_fs_buf.nodes[i].data_index == 0xFF) {
+      if (node_fs_buf.nodes[i].parent_index == cwd &&
+          node_fs_buf.nodes[i].data_index == 0xFF &&
+          strcmp(node_fs_buf.nodes[i].node_name, firstPart) == 1) {
         dirExist = 1;
         dirLoc = i;
         break;
