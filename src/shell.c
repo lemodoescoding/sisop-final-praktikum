@@ -183,7 +183,8 @@ void ls(byte cwd, char *dirname) {
   } else {
 
     for (i = 0; i < FS_MAX_NODE; i++) {
-      if (strcmp(node_fs_buf.nodes[i].node_name, dirname) == 1) {
+      if (node_fs_buf.nodes[i].parent_index == cwd &&
+          strcmp(node_fs_buf.nodes[i].node_name, dirname) == 1) {
         cwdSecond = i;
         foundDir = 1;
         break;
