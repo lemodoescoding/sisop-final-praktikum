@@ -51,16 +51,18 @@ enum fs_return {
 
   FS_R_NODE_NOT_FOUND = 1,
   FS_R_TYPE_IS_DIRECTORY = 2,
+  FS_R_SUCCESS = 3,
 
-  FS_W_NODE_ALREADY_EXISTS = 3,
-  FS_W_NOT_ENOUGH_SPACE = 4,
-  FS_W_NO_FREE_NODE = 5,
-  FS_W_NO_FREE_DATA = 6,
-  FS_W_INVALID_DIRECTORY = 7,
+  FS_W_NODE_ALREADY_EXISTS = 4,
+  FS_W_NOT_ENOUGH_SPACE = 5,
+  FS_W_NO_FREE_NODE = 6,
+  FS_W_NO_FREE_DATA = 7,
+  FS_W_INVALID_DIRECTORY = 8,
+  FS_W_SUCCESS = 9,
 };
 
 void fsInit();
-void fsRead(struct file_metadata* metadata, enum fs_return* status);
-void fsWrite(struct file_metadata* metadata, enum fs_return* status);
+void fsRead(struct file_metadata *metadata, enum fs_return *status);
+void fsWrite(struct file_metadata *metadata, enum fs_return *status);
 
 #endif // __FILESYSTEM_H__

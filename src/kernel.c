@@ -8,15 +8,16 @@ void main() {
   shell();
 }
 
-void printString(char* str) {
+void printString(char *str) {
   while (*str != '\0') {
-    if (*str == '\n') interrupt(0x10, 0xE << 8 | '\r', 0, 0, 0);
+    if (*str == '\n')
+      interrupt(0x10, 0xE << 8 | '\r', 0, 0, 0);
     interrupt(0x10, 0xE << 8 | *str, 0, 0, 0);
     str++;
   }
 }
 
-void readString(char* buf) {
+void readString(char *buf) {
   int i = 0;
   char c = 0;
 
@@ -27,8 +28,7 @@ void readString(char* buf) {
         printString("\b \b");
         i--;
       }
-    }
-    else {
+    } else {
       buf[i++] = c;
       interrupt(0x10, 0xE << 8 | c, 0, 0, 0);
     }
@@ -54,7 +54,7 @@ void clearScreen() {
   interrupt(0x10, 0x2 << 8, 0, 0, 0);
 }
 
-void readSector(byte* buf, int sector) {
+void readSector(byte *buf, int sector) {
   int ah = 0x02;                    // read sector service number
   int al = 0x01;                    // number of sectors to read
   int ch = div(sector, 36);         // cylinder number
@@ -62,14 +62,17 @@ void readSector(byte* buf, int sector) {
   int dh = mod(div(sector, 18), 2); // head number
   int dl = 0x00;                    // drive number
 
-  interrupt(
-    0x13,
-    ah << 8 | al,
-    buf,
-    ch << 8 | cl,
-    dh << 8 | dl
-  );
+  interrupt(0x13, ah << 8 | al, buf, ch << 8 | cl, dh << 8 | dl);
 }
 
 // TODO: 1. Implement writeSector function
-void writeSector(byte* buf, int sector) {}
+void writeSector(byte *buf, int sector) {
+  int ah = 0x03;
+  int al = 0x01;
+  int ch = div(sector, 36);
+  int cl = mod(sector, 18) + 1;
+  int dh = mod(div(sector, 18), 2);
+  int dl = 0x00;
+
+  interrupt(0x13, ah << 8 | al, buf, ch << 8 | cl, dh << 8 | dl);
+}
